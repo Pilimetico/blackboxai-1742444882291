@@ -2,7 +2,6 @@
 require_once '../includes/config.php';
 require_once '../includes/functions.php';
 
-// Verificar sesión de administrador
 checkAdminSession();
 
 $error = '';
@@ -11,27 +10,30 @@ $success = '';
 try {
     $db = Database::getInstance();
 
-    // Procesar formulario
+    // Handle form submission
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         validateCSRFToken($_POST['csrf_token']);
 
-        // Actualizar configuración general
         if (isset($_POST['update_settings'])) {
+            // Site settings
             $siteName = filter_input(INPUT_POST, 'site_name', FILTER_SANITIZE_STRING);
-            $whatsappTemplate = filter_input(INPUT_POST, 'whatsapp_template', FILTER_SANITIZE_STRING);
-
-            // Actualizar nombre del sitio
             updateSetting('site_name', $siteName);
-            
-            // Actualizar plantilla de WhatsApp
-            updateSetting('whatsapp_message_template', $whatsappTemplate);
 
-            // Procesar logo
+            // WhatsApp settings
+            $countryCode = filter_input(INPUT_POST, 'country_code', FILTER_SANITIZE_STRING);
+            $adminWhatsapp = filter_input(INPUT_POST, 'admin_whatsapp', FILTER_SANITIZE_STRING);
+            $messageTemplate = filter_input(INPUT_POST, 'whatsapp_message_template', FILTER_SANITIZE_STRING);
+
+            updateSetting('country_code', $countryCode);
+            updateSetting('admin_whatsapp', $adminWhatsapp);
+            updateSetting('whatsapp_message_template', $messageTemplate);
+
+            // Handle logo upload
             if (isset($_FILES['logo']) && $_FILES['logo']['error'] === UPLOAD_ERR_OK) {
                 $uploadResult = handleFileUpload(
                     $_FILES['logo'],
-                    'uploads/settings',
-                    ['image/jpeg', 'image/png', 'image/gif']
+                    'uploads/system',
+                    ['image/jpeg', 'image/png', 'image/svg+xml']
                 );
 
                 if ($uploadResult['success']) {
@@ -41,12 +43,12 @@ try {
                 }
             }
 
-            // Procesar banner
+            // Handle banner upload
             if (isset($_FILES['banner']) && $_FILES['banner']['error'] === UPLOAD_ERR_OK) {
                 $uploadResult = handleFileUpload(
                     $_FILES['banner'],
-                    'uploads/settings',
-                    ['image/jpeg', 'image/png', 'image/gif']
+                    'uploads/system',
+                    ['image/jpeg', 'image/png']
                 );
 
                 if ($uploadResult['success']) {
@@ -56,89 +58,39 @@ try {
                 }
             }
 
-            // Procesar favicon
-            if (isset($_FILES['favicon']) && $_FILES['favicon']['error'] === UPLOAD_ERR_OK) {
-                $uploadResult = handleFileUpload(
-                    $_FILES['favicon'],
-                    'uploads/settings',
-                    ['image/x-icon', 'image/png']
-                );
-
-                if ($uploadResult['success']) {
-                    updateSetting('favicon_path', $uploadResult['path']);
-                } else {
-                    throw new Exception('Error al subir el favicon: ' . $uploadResult['error']);
-                }
-            }
-
-            logAdminActivity('update_settings', 'Configuración actualizada');
             $success = 'Configuración actualizada exitosamente';
-        }
-
-        // Cambiar contraseña
-        if (isset($_POST['change_password'])) {
-            $currentPassword = $_POST['current_password'];
-            $newPassword = $_POST['new_password'];
-            $confirmPassword = $_POST['confirm_password'];
-
-            if ($newPassword !== $confirmPassword) {
-                throw new Exception('Las contraseñas nuevas no coinciden');
-            }
-
-            // Verificar contraseña actual
-            $admin = $db->query(
-                "SELECT * FROM admin_users WHERE id = ? LIMIT 1",
-                [$_SESSION['admin_id']]
-            )->fetch();
-
-            if (!password_verify($currentPassword, $admin['password'])) {
-                throw new Exception('La contraseña actual es incorrecta');
-            }
-
-            // Actualizar contraseña
-            $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-            $db->update(
-                'admin_users',
-                ['password' => $hashedPassword],
-                'id = ?',
-                [$_SESSION['admin_id']]
-            );
-
-            logAdminActivity('change_password', 'Contraseña actualizada');
-            $success = 'Contraseña actualizada exitosamente';
+            logAdminActivity('update_settings', "Updated system settings");
         }
     }
 
-    // Obtener configuración actual
+    // Get current settings
     $settings = [
         'site_name' => getSetting('site_name'),
         'logo_path' => getSetting('logo_path'),
         'banner_path' => getSetting('banner_path'),
-        'favicon_path' => getSetting('favicon_path'),
-        'whatsapp_template' => getSetting('whatsapp_message_template')
+        'country_code' => getSetting('country_code'),
+        'admin_whatsapp' => getSetting('admin_whatsapp'),
+        'whatsapp_message_template' => getSetting('whatsapp_message_template')
     ];
 
 } catch (Exception $e) {
-    error_log("Error en configuración: " . $e->getMessage());
+    error_log("Error in settings: " . $e->getMessage());
     $error = $e->getMessage();
 }
+
+$siteName = getSetting('site_name') ?? 'Sistema de Rifas';
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configuración - <?php echo htmlspecialchars($settings['site_name']); ?></title>
-    <!-- Tailwind CSS -->
+    <title>Configuración - <?php echo htmlspecialchars($siteName); ?></title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-        }
+        body { font-family: 'Poppins', sans-serif; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -146,7 +98,7 @@ try {
         <!-- Sidebar -->
         <aside class="bg-blue-800 text-white w-64 flex-shrink-0">
             <div class="p-4">
-                <h1 class="text-lg font-semibold"><?php echo htmlspecialchars($settings['site_name']); ?></h1>
+                <h1 class="text-lg font-semibold"><?php echo htmlspecialchars($siteName); ?></h1>
                 <p class="text-sm text-blue-200">Panel de Administración</p>
             </div>
             
@@ -171,6 +123,10 @@ try {
                     <i class="fas fa-ban w-6"></i>
                     <span>Números Bloqueados</span>
                 </a>
+                <a href="file_manager.php" class="flex items-center px-4 py-3 hover:bg-blue-700 transition-colors">
+                    <i class="fas fa-folder w-6"></i>
+                    <span>Gestor de Archivos</span>
+                </a>
                 <a href="logout.php" class="flex items-center px-4 py-3 hover:bg-blue-700 transition-colors mt-auto">
                     <i class="fas fa-sign-out-alt w-6"></i>
                     <span>Cerrar Sesión</span>
@@ -185,141 +141,132 @@ try {
             </div>
 
             <?php if ($error): ?>
-                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6" role="alert">
-                    <span class="block sm:inline"><?php echo htmlspecialchars($error); ?></span>
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-6">
+                    <?php echo htmlspecialchars($error); ?>
                 </div>
             <?php endif; ?>
 
             <?php if ($success): ?>
-                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6" role="alert">
-                    <span class="block sm:inline"><?php echo htmlspecialchars($success); ?></span>
+                <div class="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-6">
+                    <?php echo htmlspecialchars($success); ?>
                 </div>
             <?php endif; ?>
 
-            <!-- General Settings -->
-            <div class="bg-white rounded-lg shadow p-6 mb-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Configuración General</h3>
-                <form method="POST" enctype="multipart/form-data" class="space-y-6">
-                    <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                    <input type="hidden" name="update_settings" value="1">
+            <!-- Settings Form -->
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
+                <input type="hidden" name="update_settings" value="1">
 
-                    <div>
-                        <label for="site_name" class="block text-sm font-medium text-gray-700 mb-2">
-                            Nombre del Sitio
-                        </label>
-                        <input type="text" id="site_name" name="site_name" required
-                               value="<?php echo htmlspecialchars($settings['site_name']); ?>"
-                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <!-- Site Settings -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Configuración General</h3>
+                    
+                    <div class="grid grid-cols-1 gap-6">
+                        <div>
+                            <label for="site_name" class="block text-sm font-medium text-gray-700 mb-2">
+                                Nombre del Sitio
+                            </label>
+                            <input type="text" id="site_name" name="site_name" 
+                                   value="<?php echo htmlspecialchars($settings['site_name']); ?>"
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Logo
+                            </label>
+                            <div class="flex items-center space-x-4">
+                                <?php if (!empty($settings['logo_path'])): ?>
+                                    <img src="<?php echo htmlspecialchars($settings['logo_path']); ?>" 
+                                         alt="Logo actual" 
+                                         class="h-12 object-contain">
+                                <?php endif; ?>
+                                <input type="file" name="logo" accept="image/*"
+                                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Banner Principal
+                            </label>
+                            <div class="flex items-center space-x-4">
+                                <?php if (!empty($settings['banner_path'])): ?>
+                                    <img src="<?php echo htmlspecialchars($settings['banner_path']); ?>" 
+                                         alt="Banner actual" 
+                                         class="h-20 object-cover rounded">
+                                <?php endif; ?>
+                                <input type="file" name="banner" accept="image/*"
+                                       class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WhatsApp Settings -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold mb-4">Configuración de WhatsApp</h3>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="country_code" class="block text-sm font-medium text-gray-700 mb-2">
+                                Código de País
+                            </label>
+                            <input type="text" id="country_code" name="country_code" 
+                                   value="<?php echo htmlspecialchars($settings['country_code']); ?>"
+                                   placeholder="Ej: 34"
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div>
+                            <label for="admin_whatsapp" class="block text-sm font-medium text-gray-700 mb-2">
+                                Número de WhatsApp
+                            </label>
+                            <input type="text" id="admin_whatsapp" name="admin_whatsapp" 
+                                   value="<?php echo htmlspecialchars($settings['admin_whatsapp']); ?>"
+                                   placeholder="Sin código de país"
+                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
                     </div>
 
-                    <div>
-                        <label for="whatsapp_template" class="block text-sm font-medium text-gray-700 mb-2">
-                            Plantilla de Mensaje WhatsApp
+                    <div class="mt-6">
+                        <label for="whatsapp_message_template" class="block text-sm font-medium text-gray-700 mb-2">
+                            Plantilla de Mensaje
                         </label>
-                        <textarea id="whatsapp_template" name="whatsapp_template" rows="4" required
+                        <textarea id="whatsapp_message_template" name="whatsapp_message_template" rows="4"
                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"><?php 
-                            echo htmlspecialchars($settings['whatsapp_template']); 
+                            echo htmlspecialchars($settings['whatsapp_message_template']); 
                         ?></textarea>
-                        <p class="mt-1 text-sm text-gray-500">
+                        <p class="mt-2 text-sm text-gray-500">
                             Variables disponibles: {customer_name}, {customer_phone}, {ticket_number}, {raffle_title}
                         </p>
                     </div>
+                </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <!-- Logo -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Logo</label>
-                            <?php if (!empty($settings['logo_path'])): ?>
-                                <div class="mb-2">
-                                    <img src="<?php echo htmlspecialchars($settings['logo_path']); ?>" 
-                                         alt="Logo actual" 
-                                         class="h-20 object-contain">
-                                </div>
-                            <?php endif; ?>
-                            <input type="file" name="logo" accept="image/*"
-                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-
-                        <!-- Banner -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Banner</label>
-                            <?php if (!empty($settings['banner_path'])): ?>
-                                <div class="mb-2">
-                                    <img src="<?php echo htmlspecialchars($settings['banner_path']); ?>" 
-                                         alt="Banner actual" 
-                                         class="h-20 object-contain">
-                                </div>
-                            <?php endif; ?>
-                            <input type="file" name="banner" accept="image/*"
-                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-
-                        <!-- Favicon -->
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Favicon</label>
-                            <?php if (!empty($settings['favicon_path'])): ?>
-                                <div class="mb-2">
-                                    <img src="<?php echo htmlspecialchars($settings['favicon_path']); ?>" 
-                                         alt="Favicon actual" 
-                                         class="h-8 object-contain">
-                                </div>
-                            <?php endif; ?>
-                            <input type="file" name="favicon" accept="image/x-icon,image/png"
-                                   class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                        </div>
-                    </div>
-
-                    <div class="flex justify-end">
-                        <button type="submit" 
-                                class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                            <i class="fas fa-save mr-2"></i>
-                            Guardar Cambios
-                        </button>
-                    </div>
-                </form>
-            </div>
-
-            <!-- Change Password -->
-            <div class="bg-white rounded-lg shadow p-6">
-                <h3 class="text-lg font-semibold text-gray-800 mb-4">Cambiar Contraseña</h3>
-                <form method="POST" class="space-y-6">
-                    <input type="hidden" name="csrf_token" value="<?php echo generateCSRFToken(); ?>">
-                    <input type="hidden" name="change_password" value="1">
-
-                    <div>
-                        <label for="current_password" class="block text-sm font-medium text-gray-700 mb-2">
-                            Contraseña Actual
-                        </label>
-                        <input type="password" id="current_password" name="current_password" required
-                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-
-                    <div>
-                        <label for="new_password" class="block text-sm font-medium text-gray-700 mb-2">
-                            Nueva Contraseña
-                        </label>
-                        <input type="password" id="new_password" name="new_password" required
-                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-
-                    <div>
-                        <label for="confirm_password" class="block text-sm font-medium text-gray-700 mb-2">
-                            Confirmar Nueva Contraseña
-                        </label>
-                        <input type="password" id="confirm_password" name="confirm_password" required
-                               class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-
-                    <div class="flex justify-end">
-                        <button type="submit" 
-                                class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                            <i class="fas fa-key mr-2"></i>
-                            Cambiar Contraseña
-                        </button>
-                    </div>
-                </form>
-            </div>
+                <div class="flex justify-end">
+                    <button type="submit" 
+                            class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                                   transition-colors flex items-center">
+                        <i class="fas fa-save mr-2"></i>
+                        Guardar Configuración
+                    </button>
+                </div>
+            </form>
         </main>
     </div>
+
+    <script>
+        // Preview uploaded images
+        document.querySelectorAll('input[type="file"]').forEach(input => {
+            input.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const img = this.previousElementSibling?.querySelector('img');
+                    if (img) {
+                        img.src = URL.createObjectURL(this.files[0]);
+                    }
+                }
+            });
+        });
+    </script>
 </body>
 </html>
