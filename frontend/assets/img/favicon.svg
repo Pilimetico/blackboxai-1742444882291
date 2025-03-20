@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="32" height="32" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Circle -->
+    <circle cx="16" cy="16" r="16" fill="#3B82F6"/>
+    
+    <!-- Ticket Icon -->
+    <path d="M10 8 L22 8 L22 24 L10 24 L10 8" 
+          fill="#ffffff" stroke="none"/>
+    <path d="M12 11 L20 11 M12 14 L20 14 M12 17 L20 17 M12 20 L20 20" 
+          stroke="#3B82F6" stroke-width="1"/>
+    
+    <!-- Perforated Edge -->
+    <path d="M11 8 L11 24 M21 8 L21 24" 
+          stroke="#3B82F6" stroke-width="0.5" stroke-dasharray="2,2"/>
+</svg>
