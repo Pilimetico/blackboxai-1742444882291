@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="200" height="60" viewBox="0 0 200 60" xmlns="http://www.w3.org/2000/svg">
+    <!-- Background Rectangle -->
+    <rect x="0" y="0" width="200" height="60" fill="#ffffff"/>
+    
+    <!-- Ticket Icon -->
+    <path d="M40 15 L50 15 L50 45 L40 45 L40 15" 
+          fill="#3B82F6" stroke="none"/>
+    <path d="M42 20 L48 20 M42 25 L48 25 M42 30 L48 30 M42 35 L48 35 M42 40 L48 40" 
+          stroke="#ffffff" stroke-width="1"/>
+    
+    <!-- Text "Sistema de Rifas" -->
+    <text x="65" y="35" 
+          font-family="Arial, sans-serif" 
+          font-size="16" 
+          font-weight="bold" 
+          fill="#1F2937">
+        Sistema de Rifas
+    </text>
+</svg>
