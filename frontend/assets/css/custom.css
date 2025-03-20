@@ -1,0 +1,54 @@
+/* Custom styles for Sistema de Rifas */
+.hero-section {
+    background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.5)), url('../img/hero-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    min-height: 400px;
+}
+
+.raffle-card {
+    transition: all 0.3s ease;
+}
+
+.raffle-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+
+.tag {
+    transition: all 0.2s ease;
+}
+
+.tag:hover {
+    transform: scale(1.05);
+}
+
+.ticket-number-input::-webkit-inner-spin-button,
+.ticket-number-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.modal-backdrop {
+    backdrop-filter: blur(5px);
+}
+
+/* Tag colors */
+.tag-new { @apply bg-green-100 text-green-800; }
+.tag-sold { @apply bg-red-100 text-red-800; }
+.tag-discount { @apply bg-yellow-100 text-yellow-800; }
+
+/* Loading animation */
+.loading-spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
